@@ -1,0 +1,134 @@
+Set Up the RUST API project by adding the necessary cargo libraries and bulding the project
+Set Up PostgreSQL and pgAdmin with Docker 
+adding necessary environment variables in the .env file
+
+Launching the Postgress and pgadmin containers:
+    bringing the containers up - docker-compose -f docker-compose.no_api.yml up -d
+    bringing the containers down - docker-compose -f docker-compose.no_api.yml down
+
+    Docker commands:
+        view all active containers in terminal - docker ps 
+        remove and stop conflicting containers 
+            docker stop 09a75b405a720b326f73ac4254623f944a2a3ab8a4aca3e0383fc781d7f8148c
+            docker rm 09a75b405a720b326f73ac4254623f944a2a3ab8a4aca3e0383fc781d7f8148c
+
+        Kill all containers:
+                docker ps -aq lists all running containers and only outputs their ids
+            docker stop $(docker ps -aq)  
+            docker rm $(docker ps -aq) 
+
+
+
+
+Perfom DataBase Migrations with SQLx-CLI
+    - cargo install sqlx-cli --no-default-features --features postgres 
+    - sqlx migrate add -r "init"
+    - sqlx migrate run
+
+Defining a Database Models
+    Trait sqlx::FromRow -> in order to use query_as the output type must implement FromRow
+        #[sqlx(rename = "renamed_name")] -> when the name of a field in Rust does not match the name of its corresponding column use the rename attributes
+        #[sqlx(rename_all = "camelCase")] -> when the name of a field in Rust does not match the name of its corresponding column use the rename attributes
+        #[sqlx(default)] -> when the struct contains a field that is not present in your query , you can use the default attribute to assign the default value to the said field
+
+            e.g 
+            #[derive(sqlx::FromRow)]
+            struct User {
+                id: i32,
+                #[sqlx(rename = "userName")]
+                name: String,
+                #[sqlx(default)]
+                location: Option<String>
+
+            }
+            SELECT id, name FROM users;
+
+        #[sqlx(flatten)] - use  FromRow for parsing
+
+            #[derive(sqlx::FromRow)]
+            struct Address {
+                country: String,
+                city: String,
+                road: String
+            }
+
+            #[derive(sqlx::FromRow)]
+            struct User {
+                id: i32,
+                name: String,
+                #[sqlx(flatten)]
+                address: Address
+            }
+
+            SELECT id, name, country, city, road FROM users;
+        #[sqlx(skip)] = ignores any results from your query that implement that Trait
+            #[derive(sqlx::FromRow)]
+            struct User {
+                name: String,
+                #[sqlx(skip)]
+                addresses: Vec<Address>
+            }
+            You only need to specify the name while querying
+
+            let user: User = sqlx::query_as("SELECT name FROM users")
+                .fetch_one(&mut some_connection)
+                .await?;
+
+        #[sqlx(try_from)] - if your struct contains a field whose type is not matched with the database type, you can use this to convert the database type to the field type
+            #[derive(sqlx::FromRow)]
+            struct User {
+                id: i32,
+                name: String,
+                #[sqlx(try_from = "i64")]
+                bigIntInMySql: u64
+            }
+
+            SELECT id, name, bigIntInMySql FROM users;
+
+        #[sqlx(json)] - if your db supports a JSON type, you can use this to automatically intergrate JSON deserialization in your FromRow implementation using serde
+
+            #[derive(serde::Deserialize)]
+            struct Data{
+                fild1: String,
+                filed2: u64
+            }
+
+            #[derive(sqlx::FromRow)]
+            struct User {
+                id: i32,
+                name: String,
+                #[sqlx(json)]
+                metadata: Data
+            }
+
+            SELECT 
+                1 AS id,
+                'Name' AS name,
+                JSON_OBJECT('field1', 'value1', 'field2', 42) AS metadata
+
+    Trait sqlx::types::Type
+        indicates that a SQL tyoe is supported for a database
+
+
+Creating the Database Schema
+    This represents the SQL structure of both the UserRole enum and the User model.
+        sqlx migrate add -r "init" - generates reversible migration scripts containing both "up" and "down" SQL files within a migrations folder
+            modify the up and down scripts with the necessary sql statements
+
+        sqlx migrate run - running the migrations
+
+        docker inspect postgres - prints the information of the postgress cotaniner
+            in the network settings section copy the value of the "IP Address" property
+            open http://localhost:5050/ sign in with the pdadmin credentials in the .env file and click add new server using the above
+                ipaddress as the host name/address
+
+
+src/config.rs - read environment variables from the RUST runtime and encapsulates them within a struct for easy utilization within our app
+
+src/db.rs - establish a connection between the Rust application and the active PostgresSQL server 
+        - incooporates functions designed for querying and inserting records into the database 
+
+    
+
+### Handling API errors -error.rs :
+    utilizing an enum to define various error scenarios that our application may encounter

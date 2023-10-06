@@ -1,0 +1,28 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - '6500:5432'
+    volumes:
+      - progresDB:/data/postgres
+    env_file:
+      - ./.env
+  pgAdmin:
+    image: dpage/pgadmin4
+    container_name: pgAdmin
+    env_file:
+      - ./.env
+    ports:
+      - "5050:80"
+volumes:
+  progresDB:
+
+
+# postgres service will pull the latest Postgres image from Docker Hub, build the POstgresSQL server
+# with the credentials provided in the .env file and map port 6500 to the default Postgress port 5432
+
+# Similarly the pgAdmin service will pull the dpage/pgadmin4 image from Docker Hub, build the container
+# with the credentials provided in the .env file and map the container's port 80
+# to the host's port 5050
