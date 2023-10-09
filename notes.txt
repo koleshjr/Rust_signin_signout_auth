@@ -130,5 +130,46 @@ src/db.rs - establish a connection between the Rust application and the active P
 
     
 
-### Handling API errors -error.rs :
+### Handling API errors -error.rs : -> I need to revisit this to understand everything that is going on
     utilizing an enum to define various error scenarios that our application may encounter
+
+
+### Create Data Transfer Objects(DTOs) -> src/dtos.rs
+-> define structs that represent the structure of the request and response bodies
+-> For the request bodies we will use the validator crate to define validation rules for the fields, ensuring that users adhere to the necessary validation criteria 
+    before the requests are processed
+    It helps prevent users from submitting junk values within the request bodies
+
+
+### Creating Utility functions
+    -> password hashing
+    -> comparison to the creation and validation of JSON Web Tokens(JWTs).
+    -> Isolating these functions into dedicated modules, we pave the way for efficient unit testing
+
+    src/utils/password.rs 
+        hash user password
+        compare user password and the stored hashed password
+
+    src/utils/token.rs
+        create_token -> generates a JWT by incooporating params such as the User's ID, the JWT secret key (in byte form), and the token's expiration duration
+        decode_token -> a JWT and a secret key are provided for the purpose of JWT decoding. The payload stored within the token is extracted and returned
+
+    
+
+### Creating the DataBase Access Layer (src/db.rs)
+    this will facilitate communications with the database - faciliatets querying and inserting records using the SQLX toolkit
+    Do not embed the db access code directly within the route handlers to enable writing unit tests for each function individually and ensure a cleaner and more organized codebase
+    It helps us reuse these functions across our unit tests
+
+    - a trait is a collection of methods defined for an unknown type self, they can access other methods declared in the same trait
+
+
+### Creating the Authentication Middleware Guard
+- this is to  ensure enhanced security by requiring a valid JWT(Json Web Token) before granting access to the next middleware in the stack
+ create:
+    AuthMiddleware - the foundation upon which other middleware will be built and requires a valid JWT token in the request to access the endpoint
+    RequireAuth - ensures that the endpoint is protected and accessible only to roles specified in its list of permitted roles
+    RequireOnlyAdmin - allows access to the endpoint but exclusively to users with the admin roles
+
+    create src/extractors/auth.rs
+            mod.rs

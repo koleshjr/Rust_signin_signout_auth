@@ -1,6 +1,6 @@
-use std::fmt;
+use std::fmt;  //formatting and printing output
 
-use actix_web::{HttpResponse, ResponseError};
+use actix_web::{HttpResponse, ResponseError}; 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -9,11 +9,13 @@ pub struct ErrorResponse {
     pub message: String
 }
 
+//allows the stuct error response to be formatted as a string
 impl fmt::Display for ErrorResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write! (f, "{}", serde_json::to_string(&self).unwrap())
     }
 }
+
 
 #[derive(Serialize, Deserialize)]
 pub struct Response {
@@ -21,6 +23,7 @@ pub struct Response {
     pub message: String,
 }
 
+//defines various error messages that can be associated with HTTP errors
 #[derive(Debug, PartialEq)]
 pub enum ErrorMessage {
     EmptyPassword,
@@ -36,18 +39,21 @@ pub enum ErrorMessage {
     PermissionDenied
 }
 
+// to string trait allows the error message to be converted to a string
 impl ToString for ErrorMessage {
     fn to_string(&self) -> String {
-        self.to_str().to_owned()
+        self.to_str().to_owned() //provides a string representation for each error variant
     }
 }
 
+// into trait allows the error message to be converted to a string
 impl Into<String> for ErrorMessage {
     fn into(self) -> String {
         self.to_string()
     }
 }
 
+// display trait allows the error message to be displayed
 impl ErrorMessage {
     fn to_str(&self) -> String {
         match self {
@@ -81,7 +87,7 @@ impl HttpError {
         }
     }
 
-    pub fn server_error(message: impl Inot<String>) -> Self {
+    pub fn server_error(message: impl Into<String>) -> Self {
         HttpError {
             message: message.into(),
             status: 500,
@@ -109,6 +115,8 @@ impl HttpError {
         }
     }
 
+    // maps the error to an appropriate  Actix Web 'HttpResponse' based on the status code
+
     pub fn into_http_response(self) -> HttpResponse {
         match self.status {
             400 => HttpResponse::BadRequest().json(Response{
@@ -130,7 +138,7 @@ impl HttpError {
             }),
             _ => {
                 eprintln! {
-                    "Warning: Missing Patter match. Converted status code {} to 500",
+                    "Warning: Missing Pattern match. Converted status code {} to 500",
                     self.status
                     
                 };
@@ -150,8 +158,8 @@ impl fmt::Display for HttpError {
     }
 }
 
+// error trait implementations for HttpError
 impl std::error::Error for HttpError {}
-
 impl ResponseError for HttpError {
     fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
         let cloned = self.clone();
